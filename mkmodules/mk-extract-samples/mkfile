@@ -10,7 +10,7 @@ MKSHELL=/bin/bash
 		bcftools view \
 			--samples $sample \
 			--exclude-uncalled \
-			--exclude 'GT="RR"' \
-		$prereq > $ofile.build \
+		$prereq \
+		| bcftools view --min-ac 1 > $ofile.build \
 		&& mv $ofile.build $ofile
 	done
