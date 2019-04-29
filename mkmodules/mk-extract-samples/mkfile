@@ -1,0 +1,16 @@
+MKSHELL=/bin/bash
+
+%.EXTRACT_SAMPLES:Q: %.vcf.gz
+	echo "[DEBUG] loop through samples in VCF header to create sub-vcfs"
+	for sample in $(bcftools view -h $prereq | tail -n1 | cut -f10-)
+	do
+		echo "[>..] extracting sample $sample"
+		ofile="$stem.sample_$sample.vcf"
+		echo "[>>.] output file: $ofile"
+		bcftools view \
+			--samples $sample \
+			--exclude-uncalled \
+			--exclude 'GT="RR"' \
+		$prereq > $ofile.build \
+		&& mv $ofile.build $ofile
+	done
