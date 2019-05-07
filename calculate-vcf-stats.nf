@@ -33,6 +33,7 @@ Core-processing:
   _004_concatenate_stats
 
 Post-processing:
+	_pos1_tag_samples <<-- also plots basic QC
 
 ================================================================*/
 
@@ -199,7 +200,7 @@ def get_chr_prefix = { file -> file.toString().tokenize('.')[0,1].join(".")}
 
 /* Load vcf file and index into channel */
 Channel
-  .fromPath("${params.vcf_dir}/*")
+  .fromPath("${params.vcf_dir}/*.vcf.gz*")
 	.map{ file -> tuple(get_chr_prefix(file), file) }
 	// size: param tells tuple how many files will be expected by tuple, this speeds up tuple redirection
 	.groupTuple(size: 2) // 2, since we only need the vcf and tbi
@@ -278,6 +279,30 @@ process _004_concatenate_stats {
 
 	file "*.allstats.tsv" into results_004_concatenate_stats
 	"""
+	bash runmk.sh
+	"""
+
+}
+
+/* _pos1_tag_samples */
+/* Read mkfile module files */
+Channel
+	.fromPath("${workflow.projectDir}/mkmodules/mk-tag-samples/*")
+	.toList()
+	.set{ mkfiles_pos1 }
+
+process _pos1_tag_samples {
+
+	publishDir "${results_dir}/_pos1_tag_samples/",mode:"copy"
+
+	input:
+  file tsvfiles from results_004_concatenate_stats
+	file mk_files from mkfiles_pos1
+
+	output:
+	file "*.tagged.tsv*" into results_pos1_tag_samples
+	"""
+	export METADATA="${params.metadata}"
 	bash runmk.sh
 	"""
 
