@@ -3,9 +3,9 @@ MKSHELL=/bin/bash
 %.stats:Q: %.vcf
 	echo "[DEBUG] calculating variant stats"
 	# get sampleID
-	sampleID=$(echo $prereq | rev | cut -d"." -f2 | rev | sed "s#^sample_##" )
+	sampleID=$(echo $prereq | rev | cut -d"." -f2 | rev | sed "s#^subsampled_##" )
 	# get chromosome
-	chromosome=$(echo $prereq | rev | cut -d"." -f6 | rev )
+	chromosome=$(echo $prereq | rev | cut -d"." -f5 | rev )
 	bcftools stats $prereq \
 	| grep -v "^#" \
 	| grep "number of " \

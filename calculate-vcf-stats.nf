@@ -28,12 +28,13 @@ Pipeline Processes In Brief:
 Pre-processing:
 
 Core-processing:
+  _001_create_sample_requests
   _002_extract_samples
   _003_count_variants
   _004_concatenate_stats
 
 Post-processing:
-	_pos1_tag_samples <<-- also plots basic QC
+  _pos1_tag_samples <<-- also plots basic QC
 
 ================================================================*/
 
@@ -200,13 +201,39 @@ def get_chr_prefix = { file -> file.toString().tokenize('.')[0,1].join(".")}
 
 /* Load vcf file and index into channel */
 Channel
-  .fromPath("${params.vcf_dir}/*.vcf.gz*")
-	.map{ file -> tuple(get_chr_prefix(file), file) }
-	// size: param tells tuple how many files will be expected by tuple, this speeds up tuple redirection
-	.groupTuple(size: 2) // 2, since we only need the vcf and tbi
-  .set{ vcf_input }
+  .fromPath("${params.vcf_dir}/*.vcf.gz")
+//  .map{ file -> tuple(get_chr_prefix(file), file) }
+  // size: param tells tuple how many files will be expected by tuple, this speeds up tuple redirection
+//  .groupTuple(size: 2) // 2, since we only need the vcf and tbi
+  .into{ vcf_inputs; vcf_inputs_2 }
+
+/* _001_create_sample_requests */
+/* Read mkfile module files */
+Channel
+  .fromPath("${workflow.projectDir}/mkmodules/mk-create-sample-requests/*")
+  .toList()
+  .set{ mkfiles_001 }
+
+process _001_create_sample_requests {
+
+	input:
+	file vcf from vcf_inputs
+	file mk_files from mkfiles_001
+
+	output:
+	file "*" into results_001_create_sample_requests mode flatten
+
+	"""
+	bash runmk.sh
+	"""
+}
 
 /* _002_extract_samples */
+/* tuple files with sample extraction request */
+vcf_inputs_2
+  .toList()
+  .set{ all_vcf_inputs }
+
 /* Read mkfile module files */
 Channel
 	.fromPath("${workflow.projectDir}/mkmodules/mk-extract-samples/*")
@@ -218,12 +245,13 @@ process _002_extract_samples {
 	publishDir "${intermediates_dir}/_002_extract_samples/",mode:"symlink"
 
 	input:
-	set val(chrom), file(vcf) from vcf_input
+	file sample_request from results_001_create_sample_requests
+	file vcfinputs from all_vcf_inputs
 	file mk_files from mkfiles_002
 
 	output:
-
 	file "*.vcf" into results_002_extract_samples mode flatten
+
 	"""
 	bash runmk.sh
 	"""
@@ -242,12 +270,12 @@ process _003_count_variants {
 	publishDir "${intermediates_dir}/_003_count_variants/",mode:"symlink"
 
 	input:
-  file vcf from results_002_extract_samples
+	file vcf from results_002_extract_samples
 	file mk_files from mkfiles_003
 
 	output:
-
 	file "*.stats" into results_003_count_variants
+
 	"""
 	bash runmk.sh
 	"""
@@ -269,15 +297,15 @@ Channel
 
 process _004_concatenate_stats {
 
-	publishDir "${results_dir}/_004_concatenate_stats/",mode:"symlink"
+	publishDir "${intermediates_dir}/_004_concatenate_stats/",mode:"symlink"
 
 	input:
-  file tsvfiles from inputs_for_004
+	file tsvfiles from inputs_for_004
 	file mk_files from mkfiles_004
 
 	output:
-
 	file "*.allstats.tsv" into results_004_concatenate_stats
+
 	"""
 	bash runmk.sh
 	"""
@@ -296,11 +324,12 @@ process _pos1_tag_samples {
 	publishDir "${results_dir}/_pos1_tag_samples/",mode:"copy"
 
 	input:
-  file tsvfiles from results_004_concatenate_stats
+	file tsvfiles from results_004_concatenate_stats
 	file mk_files from mkfiles_pos1
 
 	output:
 	file "*.tagged.tsv*" into results_pos1_tag_samples
+
 	"""
 	export METADATA="${params.metadata}"
 	bash runmk.sh

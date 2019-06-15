@@ -3,7 +3,6 @@
 ## Find files with .vcf extension
 find -L . \
 	-type f \
-	-name '*.vcf.gz' \
-	! -name '*.sample_*.vcf' \
-| sed 's#.vcf.gz#.EXTRACT_SAMPLES#' \
+	-name '*.vcf.tmp' \
+| sed 's#.vcf.tmp#.vcf#' \
 | xargs mk

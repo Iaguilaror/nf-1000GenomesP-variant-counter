@@ -4,6 +4,6 @@
 find -L . \
 	-type f \
 	-name '*.stats' \
-| sed "s#\\.chr.*#\\.allstats.tsv#" \
+| sed "s#\\.subsampled_.*#\\.allstats\\.tsv#" \
 | sort -u \
 | xargs mk
