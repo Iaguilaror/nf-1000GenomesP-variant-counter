@@ -3,6 +3,6 @@
 ## Find files with .vcf extension
 find -L . \
 	-type f \
-	-name '*.vcf' \
-| sed 's#.vcf#.stats#' \
+	-name '*.stats.tmp' \
+| sed 's#.stats.tmp#.stats#' \
 | xargs mk

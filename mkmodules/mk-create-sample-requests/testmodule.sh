@@ -15,4 +15,3 @@ echo "[>>.] results will be created in test/results"
 ./runmk.sh \
 && mv test/data/*.tmp test/results \
 && echo "[>>>] Module Test Successful"
-

@@ -1,15 +1,34 @@
 MKSHELL=/bin/bash
-
-%.stats:Q: %.vcf
-	echo "[DEBUG] calculating variant stats"
+#sample.chr21_GRCh38.genotypes.20170504.sample_HG00097.stats.tmp
+#:QR:
+#sample.chr21_GRCh38.genotypes.20170504.sample_HG00097.stats.tmp
+#sample.chr21_GRCh38.genotypes.20170504.vcf.gz
+## REGEXP group 1 is the original VCF file name
+## REGEXP group 2 is the sample ID to extract the stats from
+(.*)\\.sample_(.*)\\.stats:QR: \\1\\.vcf\\.gz \\1\\.sample_\\2\\.stats\\.tmp
+	echo "[DEBUG] calculating variant stats for $prereq"
 	# get sampleID
-	sampleID=$(echo $prereq | rev | cut -d"." -f2 | rev | sed "s#^subsampled_##" )
+	sampleID=$(echo $target | rev | cut -d"." -f2 | rev | sed "s#^sample_##" )
 	# get chromosome
-	chromosome=$(echo $prereq | rev | cut -d"." -f5 | rev )
-	bcftools stats $prereq \
-	| grep -v "^#" \
-	| grep "number of " \
-	| cut -f3- \
-	| tr -d ":" \
-	| sed "s#^#$sampleID\t$chromosome\t#" > $target.build \
+	chromosome=$(echo $target | rev | cut -d"." -f5 | rev )
+	stats_data=$(bcftools stats --samples $sampleID $stem1.vcf.gz | grep "^PSC" | cut -f5-9,11)
+	nNonRefHom=$(echo $stats_data | cut -d" " -f1)
+	nHets=$(echo $stats_data | cut -d" " -f2)
+	nTransitions=$(echo $stats_data | cut -d" " -f3)
+	nTransversions=$(echo $stats_data | cut -d" " -f4)
+	nIndels=$(echo $stats_data | cut -d" " -f5)
+	nSingletons=$(echo $stats_data | cut -d" " -f6)
+ 	echo "$sampleID $chromosome nNonRefHom $nNonRefHom
+	$sampleID $chromosome nHets $nHets
+	$sampleID $chromosome nTransitions $nTransitions
+	$sampleID $chromosome nTransversions $nTransversions
+	$sampleID $chromosome nIndels $nIndels
+	$sampleID $chromosome nSNPs $(($nNonRefHom + $nHets))" \
+	| tr " " "\t" > $target.build \
 	&& mv $target.build $target
+
+# \
+# | cut -f3- \
+# | tr -d ":" \
+# | sed "s#^#$sampleID\t$chromosome\t#" > $target.build \
+# && mv $target.build $target

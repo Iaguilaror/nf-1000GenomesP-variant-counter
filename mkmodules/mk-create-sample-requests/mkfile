@@ -3,6 +3,6 @@
 	for sample in $(bcftools view -h $prereq | tail -n1 | cut -f10-)
         do
                 echo "[>..] extracting sample $sample"
-                ofile="$stem.subsampled_$sample.vcf.tmp"
+                ofile="$stem.sample_$sample.stats.tmp"
 		> $ofile
 	done
