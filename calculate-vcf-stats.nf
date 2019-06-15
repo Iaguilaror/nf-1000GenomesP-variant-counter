@@ -29,9 +29,8 @@ Pre-processing:
 
 Core-processing:
   _001_create_sample_requests
-  _002_extract_samples
-  _003_count_variants
-  _004_concatenate_stats
+  _002_count_variants
+  _003_concatenate_stats
 
 Post-processing:
   _pos1_tag_samples <<-- also plots basic QC
@@ -199,12 +198,9 @@ log.info "==========================================\nPipeline Start"
 /* Define function to pair vcf and tbi inputs */
 def get_chr_prefix = { file -> file.toString().tokenize('.')[0,1].join(".")}
 
-/* Load vcf file and index into channel */
+/* Load vcf file into channel */
 Channel
   .fromPath("${params.vcf_dir}/*.vcf.gz")
-//  .map{ file -> tuple(get_chr_prefix(file), file) }
-  // size: param tells tuple how many files will be expected by tuple, this speeds up tuple redirection
-//  .groupTuple(size: 2) // 2, since we only need the vcf and tbi
   .into{ vcf_inputs; vcf_inputs_2 }
 
 /* _001_create_sample_requests */
@@ -228,53 +224,29 @@ process _001_create_sample_requests {
 	"""
 }
 
-/* _002_extract_samples */
-/* tuple files with sample extraction request */
+/* _002_count_variants */
+/* gather all vcf_inputs_2 to send to nextmodule */
 vcf_inputs_2
-  .toList()
-  .set{ all_vcf_inputs }
-
-/* Read mkfile module files */
-Channel
-	.fromPath("${workflow.projectDir}/mkmodules/mk-extract-samples/*")
 	.toList()
-	.set{ mkfiles_002 }
+	.set{ all_vcf_inputs }
 
-process _002_extract_samples {
-
-	publishDir "${intermediates_dir}/_002_extract_samples/",mode:"symlink"
-
-	input:
-	file sample_request from results_001_create_sample_requests
-	file vcfinputs from all_vcf_inputs
-	file mk_files from mkfiles_002
-
-	output:
-	file "*.vcf" into results_002_extract_samples mode flatten
-
-	"""
-	bash runmk.sh
-	"""
-
-}
-
-/* _003_count_variants */
 /* Read mkfile module files */
 Channel
 	.fromPath("${workflow.projectDir}/mkmodules/mk-count-variants/*")
 	.toList()
-	.set{ mkfiles_003 }
+	.set{ mkfiles_002 }
 
-process _003_count_variants {
+process _002_count_variants {
 
-	publishDir "${intermediates_dir}/_003_count_variants/",mode:"symlink"
+	publishDir "${intermediates_dir}/_002_count_variants/",mode:"symlink"
 
 	input:
-	file vcf from results_002_extract_samples
-	file mk_files from mkfiles_003
+	file sample_request from results_001_create_sample_requests
+	file all_vcf from all_vcf_inputs
+	file mk_files from mkfiles_002
 
 	output:
-	file "*.stats" into results_003_count_variants
+	file "*.stats" into results_002_count_variants
 
 	"""
 	bash runmk.sh
@@ -282,29 +254,29 @@ process _003_count_variants {
 
 }
 
-/* _004_concatenate_stats */
+/* _003_concatenate_stats */
 /* Gather all files before concatneation */
-results_003_count_variants
+results_002_count_variants
   .toList()
-  .set{ inputs_for_004 }
+  .set{ inputs_for_003 }
 
 
 /* Read mkfile module files */
 Channel
 	.fromPath("${workflow.projectDir}/mkmodules/mk-concatenate-stats/*")
 	.toList()
-	.set{ mkfiles_004 }
+	.set{ mkfiles_003 }
 
-process _004_concatenate_stats {
+process _003_concatenate_stats {
 
-	publishDir "${intermediates_dir}/_004_concatenate_stats/",mode:"symlink"
+	publishDir "${intermediates_dir}/_003_concatenate_stats/",mode:"symlink"
 
 	input:
-	file tsvfiles from inputs_for_004
-	file mk_files from mkfiles_004
+	file tsvfiles from inputs_for_003
+	file mk_files from mkfiles_003
 
 	output:
-	file "*.allstats.tsv" into results_004_concatenate_stats
+	file "*.allstats.tsv" into results_003_concatenate_stats mode flatten
 
 	"""
 	bash runmk.sh
@@ -324,7 +296,7 @@ process _pos1_tag_samples {
 	publishDir "${results_dir}/_pos1_tag_samples/",mode:"copy"
 
 	input:
-	file tsvfiles from results_004_concatenate_stats
+	file tsvfiles from results_003_concatenate_stats
 	file mk_files from mkfiles_pos1
 
 	output:
