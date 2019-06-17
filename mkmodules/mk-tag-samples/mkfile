@@ -1,5 +1,0 @@
-MKSHELL=/bin/bash
-
-%.tagged.tsv:Q: %.tsv $METADATA
-	echo "[DEBUG] tag samples with sex, pop and superpop data"
-	Rscript tagger.R $prereq $target

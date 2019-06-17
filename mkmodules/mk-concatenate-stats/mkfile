@@ -1,6 +1,0 @@
-MKSHELL=/bin/bash
-
-%.allstats.tsv:Q:
-	echo "[DEBUG] concatenate stats files for $target"
-	cat $(ls $stem.* | sort -V) > $target.build \
-	&& mv $target.build $target

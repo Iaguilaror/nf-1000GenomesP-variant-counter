@@ -28,12 +28,9 @@ Pipeline Processes In Brief:
 Pre-processing:
 
 Core-processing:
-  _001_create_sample_requests
-  _002_count_variants
-  _003_concatenate_stats
+  _001_count_and_tag
 
 Post-processing:
-  _pos1_tag_samples <<-- also plots basic QC
 
 ================================================================*/
 
@@ -195,116 +192,32 @@ log.info "==========================================\nPipeline Start"
 /*
 	READ INPUTS
 */
-/* Define function to pair vcf and tbi inputs */
-def get_chr_prefix = { file -> file.toString().tokenize('.')[0,1].join(".")}
 
 /* Load vcf file into channel */
 Channel
   .fromPath("${params.vcf_dir}/*.vcf.gz")
-  .into{ vcf_inputs; vcf_inputs_2 }
+  .into{ vcf_inputs }
 
 /* _001_create_sample_requests */
 /* Read mkfile module files */
 Channel
-  .fromPath("${workflow.projectDir}/mkmodules/mk-create-sample-requests/*")
+  .fromPath("${workflow.projectDir}/mkmodules/mk-count-and-tag-samples/*")
   .toList()
   .set{ mkfiles_001 }
 
-process _001_create_sample_requests {
+process _001_count_and_tag {
+
+	publishDir "${results_dir}/_001_count_and_tag/",mode:"copy"
 
 	input:
 	file vcf from vcf_inputs
 	file mk_files from mkfiles_001
 
 	output:
-	file "*" into results_001_create_sample_requests mode flatten
-
-	"""
-	bash runmk.sh
-	"""
-}
-
-/* _002_count_variants */
-/* gather all vcf_inputs_2 to send to nextmodule */
-vcf_inputs_2
-	.toList()
-	.set{ all_vcf_inputs }
-
-/* Read mkfile module files */
-Channel
-	.fromPath("${workflow.projectDir}/mkmodules/mk-count-variants/*")
-	.toList()
-	.set{ mkfiles_002 }
-
-process _002_count_variants {
-
-	publishDir "${intermediates_dir}/_002_count_variants/",mode:"symlink"
-
-	input:
-	file sample_request from results_001_create_sample_requests
-	file all_vcf from all_vcf_inputs
-	file mk_files from mkfiles_002
-
-	output:
-	file "*.stats" into results_002_count_variants
-
-	"""
-	bash runmk.sh
-	"""
-
-}
-
-/* _003_concatenate_stats */
-/* Gather all files before concatneation */
-results_002_count_variants
-  .toList()
-  .set{ inputs_for_003 }
-
-
-/* Read mkfile module files */
-Channel
-	.fromPath("${workflow.projectDir}/mkmodules/mk-concatenate-stats/*")
-	.toList()
-	.set{ mkfiles_003 }
-
-process _003_concatenate_stats {
-
-	publishDir "${intermediates_dir}/_003_concatenate_stats/",mode:"symlink"
-
-	input:
-	file tsvfiles from inputs_for_003
-	file mk_files from mkfiles_003
-
-	output:
-	file "*.allstats.tsv" into results_003_concatenate_stats mode flatten
-
-	"""
-	bash runmk.sh
-	"""
-
-}
-
-/* _pos1_tag_samples */
-/* Read mkfile module files */
-Channel
-	.fromPath("${workflow.projectDir}/mkmodules/mk-tag-samples/*")
-	.toList()
-	.set{ mkfiles_pos1 }
-
-process _pos1_tag_samples {
-
-	publishDir "${results_dir}/_pos1_tag_samples/",mode:"copy"
-
-	input:
-	file tsvfiles from results_003_concatenate_stats
-	file mk_files from mkfiles_pos1
-
-	output:
-	file "*.tagged.tsv*" into results_pos1_tag_samples
+	file "*.tsv" into results_001_count_and_tag
 
 	"""
 	export METADATA="${params.metadata}"
 	bash runmk.sh
 	"""
-
 }

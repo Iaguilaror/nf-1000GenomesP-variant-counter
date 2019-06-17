@@ -1,8 +1,0 @@
-%.REQUEST_SAMPLES:Q: %.vcf.gz
-	echo "[DEBUG] create empty files for downstream request of sample extraction from $prereq"
-	for sample in $(bcftools view -h $prereq | tail -n1 | cut -f10-)
-        do
-                echo "[>..] extracting sample $sample"
-                ofile="$stem.sample_$sample.stats.tmp"
-		> $ofile
-	done

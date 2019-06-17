@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
 ## This small script runs a module test with the sample data
 
 ## Export variables
@@ -9,9 +10,9 @@ echo "[>..] test running this module with data in test/data"
 rm -rf test/results
 mkdir -p test/results
 echo "[>>.] results will be created in test/results"
-## Execute runmk.sh, it will find the basic example in test/data
-## Move results from test/data to test/results
-## results files are *.tagged.tsv*
+## Execute runmk.sh, it will find the basic example in test/data ; -a arg forces target creation even if results are up to date
+## Move results from . to test/results
+## files are *.rawstats
 ./runmk.sh \
-&& mv test/data/*.tagged.tsv* test/results \
+&& mv test/data/*.counts.tsv test/results/ \
 && echo "[>>>] Module Test Successful"

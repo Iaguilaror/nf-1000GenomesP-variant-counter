@@ -1,0 +1,23 @@
+MKSHELL=/bin/bash
+
+%.counts.tsv:Q: %.count_block.tmp $METADATA
+	echo "[DEBUG] transform wide to long format"
+	## get chromosome name from file to pass for R to operate
+	chromosome=$(basename "$target" | cut -d"." -f2)
+	echo "[...] chromosome is $chromosome"
+	Rscript --vanilla final-counter.R $prereq $target.build $chromosome \
+	&& mv $target.build $target \
+	&& rm $stem.*.tmp
+
+%.count_block.tmp:Q: %.rawstats.tmp
+	echo "[DEBUG] extract block of count data only"
+	grep "# PSC.*id.*sample.*nRefHom" $prereq | sed "s#\[[0-9]*\]##g" | cut -f3- > $target.build \
+	&& grep "^PSC" $prereq | cut -f3- >> $target.build \
+	&& mv $target.build $target
+
+%.rawstats.tmp:Q: %.vcf.gz
+	echo "[DEBUG] count raw stats for all samples for"
+	all_samples=$(bcftools view -h $prereq | tail -n1 | cut -f10- | tr "\t" ",")
+	echo "[...] samples to count are: $all_samples"
+	bcftools stats --samples $all_samples $prereq > $target.build \
+	&& mv $target.build $target

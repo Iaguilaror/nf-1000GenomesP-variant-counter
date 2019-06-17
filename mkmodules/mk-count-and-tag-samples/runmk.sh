@@ -3,6 +3,5 @@
 find -L . \
   -type f \
   -name "*.vcf.gz" \
-| sed "s#.vcf.gz#.REQUEST_SAMPLES#" \
+| sed "s#.vcf.gz#.counts.tsv#" \
 | xargs mk
-
