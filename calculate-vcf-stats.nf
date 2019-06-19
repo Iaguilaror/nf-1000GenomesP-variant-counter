@@ -31,6 +31,8 @@ Core-processing:
   _001_count_and_tag
 
 Post-processing:
+	_pos1_gather_samples
+	_pos2_basic_QC
 
 ================================================================*/
 
@@ -207,7 +209,7 @@ Channel
 
 process _001_count_and_tag {
 
-	publishDir "${results_dir}/_001_count_and_tag/",mode:"copy"
+	publishDir "${results_dir}/_001_count_and_tag/",mode:"symlink"
 
 	input:
 	file vcf from vcf_inputs
@@ -218,6 +220,56 @@ process _001_count_and_tag {
 
 	"""
 	export METADATA="${params.metadata}"
+	bash runmk.sh
+	"""
+}
+
+/* _pos1_gather_samples */
+results_001_count_and_tag
+	.toList()
+	.set{ all_results_001 }
+
+/* Read mkfile module files */
+Channel
+  .fromPath("${workflow.projectDir}/mkmodules/mk-gather-results/*")
+  .toList()
+  .set{ mkfiles_pos1 }
+
+process _pos1_gather_samples {
+
+	publishDir "${results_dir}/_pos1_gather_samples/",mode:"copy"
+
+	input:
+	file vcf from all_results_001
+	file mk_files from mkfiles_pos1
+
+	output:
+	file "*.tsv" into results_pos1_gather_samples
+
+	"""
+	bash runmk.sh
+	"""
+}
+
+/* _pos2_basic_QC */
+/* Read mkfile module files */
+Channel
+  .fromPath("${workflow.projectDir}/mkmodules/mk-basic-QC/*")
+  .toList()
+  .set{ mkfiles_pos2 }
+
+process _pos2_basic_QC {
+
+	publishDir "${results_dir}/_pos2_basic_QC/",mode:"copy"
+
+	input:
+	file vcf from results_pos1_gather_samples
+	file mk_files from mkfiles_pos2
+
+	output:
+	file "*.pdf"
+
+	"""
 	bash runmk.sh
 	"""
 }

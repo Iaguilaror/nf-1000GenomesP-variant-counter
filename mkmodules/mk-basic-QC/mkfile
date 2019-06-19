@@ -1,0 +1,6 @@
+MKSHELL=/bin/bash
+
+%.basicQC.pdf:Q: %.tsv
+	echo "[DEBUG] plotting basic data per sample"
+	Rscript --vanilla plotter.R $prereq $target.build \
+ 	&& mv $target.build $target
